@@ -1,9 +1,11 @@
 from collections import namedtuple
-from ctypes import wintypes
+from ctypes import wintypes, byref
 import ctypes
 from ctypes import windll
 
 user32 = ctypes.WinDLL("user32")
+kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
 GetWindowRect = windll.user32.GetWindowRect
 GetClientRect = windll.user32.GetClientRect
 
@@ -24,7 +26,7 @@ WNDENUMPROC = ctypes.WINFUNCTYPE(
 )
 WindowInfo = namedtuple(
     "WindowInfo",
-    "pid title hwnd length tid status coords_client dim_client coords_win dim_win",
+    "pid title hwnd length tid status coords_client dim_client coords_win dim_win class_name path",
 )
 
 
@@ -57,6 +59,20 @@ def get_window_infos():
         coords_win = left, right, top, bottom
         dim_win = w, h
 
+        length_ = 257
+        title = ctypes.create_unicode_buffer(length_)
+        user32.GetClassNameW(hWnd, title, length_)
+        classname = title.value
+
+        try:
+            coa = kernel32.OpenProcess(0x1000, 0, pid.value)
+            path = (ctypes.c_wchar * 260)()
+            size = ctypes.c_uint(260)
+            kernel32.QueryFullProcessImageNameW(coa, 0, path, byref(size))
+            filepath = path.value
+        except Exception as fe:
+            filepath = ""
+
         result.append(
             (
                 WindowInfo(
@@ -70,6 +86,8 @@ def get_window_infos():
                     dim_client,
                     coords_win,
                     dim_win,
+                    classname,
+                    filepath,
                 )
             )
         )
