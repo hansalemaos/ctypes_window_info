@@ -10,6 +10,13 @@ GetWindowRect = windll.user32.GetWindowRect
 GetClientRect = windll.user32.GetClientRect
 
 
+def get_window_text(hWnd):
+    length = windll.user32.GetWindowTextLengthW(hWnd)
+    buf = ctypes.create_unicode_buffer(length + 1)
+    windll.user32.GetWindowTextW(hWnd, buf, length + 1)
+    return buf.value
+
+
 class RECT(ctypes.Structure):
     _fields_ = [
         ("left", ctypes.c_long),
@@ -26,7 +33,7 @@ WNDENUMPROC = ctypes.WINFUNCTYPE(
 )
 WindowInfo = namedtuple(
     "WindowInfo",
-    "pid title hwnd length tid status coords_client dim_client coords_win dim_win class_name path",
+    "pid title windowtext hwnd length tid status coords_client dim_client coords_win dim_win class_name path",
 )
 
 
@@ -63,6 +70,10 @@ def get_window_infos():
         title = ctypes.create_unicode_buffer(length_)
         user32.GetClassNameW(hWnd, title, length_)
         classname = title.value
+        try:
+            windowtext = get_window_text(hWnd)
+        except Exception:
+            windowtext = ""
 
         try:
             coa = kernel32.OpenProcess(0x1000, 0, pid.value)
@@ -78,6 +89,7 @@ def get_window_infos():
                 WindowInfo(
                     pid.value,
                     title.value,
+                    windowtext,
                     hWnd,
                     length,
                     tid,
