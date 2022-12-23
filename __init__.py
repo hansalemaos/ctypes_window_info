@@ -81,6 +81,7 @@ def get_window_infos():
             size = ctypes.c_uint(260)
             kernel32.QueryFullProcessImageNameW(coa, 0, path, byref(size))
             filepath = path.value
+            ctypes.windll.kernel32.CloseHandle(coa)
         except Exception as fe:
             filepath = ""
 
